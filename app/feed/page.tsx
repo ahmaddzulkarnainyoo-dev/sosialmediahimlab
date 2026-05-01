@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import AuthPage from "@/components/auth/AuthPage";
+import FeedPage from "@/components/feed/FeedPage";
 
-export default async function Home() {
+export default async function Feed() {
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
 
-  if (data.session) redirect("/feed");
+  if (!user) redirect("/");
 
-  return <AuthPage />;
+  return <FeedPage currentUserId={user.id} />;
 }
