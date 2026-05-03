@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import Comments from "@/components/Comments";
+import AdminPostCreator from "@/components/AdminPostCreator";
 
 const supabase = createClient();
 
@@ -28,6 +29,8 @@ type Post = {
   _count: { likes: number; comments: number };
   is_liked: boolean;
   like_count?: number;
+  is_announcement?: boolean;
+  pinned?: boolean;
 };
 
 function timeAgo(dateStr: string): string {
@@ -101,7 +104,7 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
     setLiked((p) => !p);
   }
 
-  const isAnnouncement = post.type === "announcement";
+  const isAnnouncement = post.is_announcement || post.type === "announcement";
 
   return (
     <motion.article
@@ -109,11 +112,20 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
       className={`relative overflow-hidden rounded-2xl border transition-colors duration-200 ${
-        isAnnouncement ? "bg-amber-500/5 border-amber-500/20" : "bg-white/5 border-white/10 hover:bg-white/[0.08]"
+        isAnnouncement 
+          ? "bg-amber-500/8 border-amber-500/30 ring-1 ring-amber-500/20" 
+          : "bg-white/5 border-white/10 hover:bg-white/[0.08]"
       }`}
     >
       {isAnnouncement && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/40 to-transparent" />
+        <>
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500/80 via-amber-400/50 to-transparent" />
+          {post.pinned && (
+            <div className="absolute top-3 right-3 bg-amber-500/20 text-amber-300 text-xs px-2 py-1 rounded-full border border-amber-500/30 flex items-center gap-1">
+              <span>📌</span> Pinned
+            </div>
+          )}
+        </>
       )}
       <div className="p-4">
         <div className="flex items-start gap-3 mb-3">
@@ -122,6 +134,11 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold text-white/90 truncate">{post.author.full_name}</span>
               <RoleBadge role={post.author.role} />
+              {isAnnouncement && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  📢 Pengumuman
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 text-xs text-white/40">
               <span>@{post.author.username}</span>
@@ -266,11 +283,19 @@ export default function FeedPage({ currentUserId }: { currentUserId: string }) {
     const { data, error } = await supabase
       .from("posts")
       .select("*, author:profiles!author_id(id, full_name, username, avatar_url, role, angkatan), likes(count), comments(count)")
+      .order("is_announcement", { ascending: false })
+      .order("pinned", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20);
 
     if (error) {
-      const fallback = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(20);
+      const fallback = await supabase
+        .from("posts")
+        .select("*")
+        .order("is_announcement", { ascending: false })
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(20);
       if (fallback.error) {
         setErrorMessage("Tidak bisa memuat feed. Pastikan tabel Supabase sudah dibuat.");
         setLoading(false);
@@ -344,6 +369,13 @@ export default function FeedPage({ currentUserId }: { currentUserId: string }) {
             Keluar
           </button>
         </header>
+
+        {/* Admin Post Creator */}
+        <AdminPostCreator 
+          currentUserId={currentUserId} 
+          currentUserRole={profile?.role ?? "member"}
+          onPostCreated={fetchFeed}
+        />
 
         <div className="bg-white/5 border border-white/10 rounded-3xl p-4 mb-4 shadow-xl shadow-black/20 backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-4">

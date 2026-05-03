@@ -23,14 +23,20 @@ CREATE TABLE profiles (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Create posts table.
-CREATE TABLE posts (
+-- Update posts table to support announcements
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_announcement BOOLEAN DEFAULT FALSE;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS announce_level TEXT DEFAULT 'public';
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  author_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  content text NOT NULL,
-  image_url text,
-  type text NOT NULL DEFAULT 'post',
-  view_count integer NOT NULL DEFAULT 0,
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  related_user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  related_post_id uuid REFERENCES posts(id) ON DELETE CASCADE,
+  content text,
+  is_read boolean NOT NULL DEFAULT FALSE,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -180,3 +186,23 @@ CREATE POLICY "Allow connection insert" ON connections
 
 CREATE POLICY "Allow connection update for receiver" ON connections
   FOR UPDATE USING (auth.uid() = receiver_id);
+
+-- Notifications policies
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow notification select for owner" ON notifications
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow notification insert" ON notifications
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow notification update for owner" ON notifications
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow notification delete for owner" ON notifications
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Create indexes for notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, is_read);
