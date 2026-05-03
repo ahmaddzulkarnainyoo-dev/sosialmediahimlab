@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-const supabase = createBrowserSupabaseClient();
+const supabase = createClient();
 
 async function ensureProfile(user: User) {
   const baseName = user.email?.split("@")[0] ?? `himlab${user.id.slice(0, 6)}`;
