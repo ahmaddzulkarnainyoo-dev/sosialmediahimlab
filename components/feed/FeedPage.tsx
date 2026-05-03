@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import Comments from "@/components/Comments";
 
 const supabase = createClient();
 
@@ -85,6 +86,7 @@ function RoleBadge({ role }: { role: Profile["role"] }) {
 function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }) {
   const [liked, setLiked] = useState(post.is_liked);
   const [likeCount, setLikeCount] = useState(post.like_count ?? post._count.likes);
+  const [showComments, setShowComments] = useState(false);
 
   async function handleLike() {
     if (!currentUserId) return;
@@ -149,18 +151,23 @@ function PostCard({ post, currentUserId }: { post: Post; currentUserId: string }
             </svg>
             <span>{likeCount > 0 ? likeCount : ""}</span>
           </motion.button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors">
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => setShowComments(!showComments)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+          >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <span>{post._count.comments > 0 ? post._count.comments : ""}</span>
-          </button>
+          </motion.button>
           <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors ml-auto">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
           </button>
         </div>
+        {showComments && <Comments postId={post.id} currentUserId={currentUserId} />}
       </div>
     </motion.article>
   );
