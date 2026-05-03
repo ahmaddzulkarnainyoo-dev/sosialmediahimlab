@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
-const supabase = createBrowserSupabaseClient();
+const supabase = createClient();
 
 type Profile = {
   id: string;
